@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:location/location.dart';
 import 'package:meta/meta.dart';
+import 'package:latlong2/latlong.dart';
 
 part 'location_event.dart';
 part 'location_state.dart';
@@ -41,7 +42,7 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
 
     }
     if(event is LocationSetStateEvent){
-      yield LocationSetState(locationData: event.data);
+      yield LocationSetState(locationData:LatLng(event.data.latitude!,event.data.longitude!),accuracy:event.data.accuracy!);
     }
   }
 }

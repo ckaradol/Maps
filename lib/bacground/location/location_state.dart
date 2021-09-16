@@ -5,7 +5,8 @@ abstract class LocationState {}
 
 class LocationInitial extends LocationState {}
 class LocationSetState extends LocationState{
-  final LocationData locationData;
+  final LatLng locationData;
+  final double accuracy;
 
-  LocationSetState({required this.locationData});
+  LocationSetState({required this.locationData,required this.accuracy, });
 }
