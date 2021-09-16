@@ -29,8 +29,8 @@ class DataBloc extends Bloc<DataEvent, DataState> {
        DataModel dataModel=DataModel.fromJson(data);
        dataMarker.add(
        Marker(
-         width: 20,
-         height: 20,
+         width: 80,
+         height: 80,
          point:LatLng(dataModel.lat!,dataModel.lng!) ,
          builder: (ctx) => DataMarker(),
        ));
