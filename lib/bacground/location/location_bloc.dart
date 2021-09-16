@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
+import 'package:location/location.dart';
 import 'package:meta/meta.dart';
 
 part 'location_event.dart';
@@ -13,6 +14,34 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
   Stream<LocationState> mapEventToState(
     LocationEvent event,
   ) async* {
- 
+    if(event is LocationInitialEvent){
+      Location location = new Location();
+
+      bool _serviceEnabled;
+      PermissionStatus _permissionGranted;
+
+      _serviceEnabled = await location.serviceEnabled();
+      if (!_serviceEnabled) {
+        _serviceEnabled = await location.requestService();
+        if (!_serviceEnabled) {
+          return;
+        }
+      }
+
+      _permissionGranted = await location.hasPermission();
+      if (_permissionGranted == PermissionStatus.denied) {
+        _permissionGranted = await location.requestPermission();
+        if (_permissionGranted != PermissionStatus.granted) {
+          return;
+        }
+      }
+      location.onLocationChanged.listen((LocationData currentLocation) {
+        add(LocationSetStateEvent(data: currentLocation));
+      });
+
+    }
+    if(event is LocationSetStateEvent){
+      yield LocationSetState(locationData: event.data);
+    }
   }
 }
