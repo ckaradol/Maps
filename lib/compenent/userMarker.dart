@@ -15,7 +15,7 @@ class UserMarker extends StatelessWidget {
             color: Colors.blue.shade100,
             borderRadius: BorderRadius.circular(100)
         ),
-        child: Icon(Icons.circle,color: Colors.blue,size: 5,)
+        child: Icon(Icons.circle,color: Colors.blue,size: 20,)
     );
   }
 }
