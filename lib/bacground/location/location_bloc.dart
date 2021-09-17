@@ -16,7 +16,7 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
     LocationEvent event,
   ) async* {
     if(event is LocationInitialEvent){
-      Location location = new Location();
+      Location location = Location();
 
       bool _serviceEnabled;
       PermissionStatus _permissionGranted;
@@ -42,7 +42,7 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
 
     }
     if(event is LocationSetStateEvent){
-      yield LocationSetState(locationData:LatLng(event.data.latitude!,event.data.longitude!),accuracy:event.data.accuracy!);
+      yield LocationSetState(locationData:LatLng(event.data.latitude!,event.data.longitude!),accuracy:event.data.accuracy!,isMock: event.data.isMock);
     }
   }
 }
