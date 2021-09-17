@@ -28,7 +28,6 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
     // Create a animation controller that has a duration and a TickerProvider.
     var controller = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
     // The animation determines what path the animation will take. You can try different Curves values, although I found
-    // fastOutSlowIn to be my favorite.
     Animation<double> animation = CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
 
     controller.addListener(() {
@@ -81,10 +80,11 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
                             ),
                           MarkerLayerOptions(markers: [
                             Marker(
-                              width: state.accuracy,
-                              height: state.accuracy,
+                              width: state.accuracy<=60?state.accuracy:20,
+                              height: state.accuracy<=60?state.accuracy:20,
                               point: state.locationData,
                               builder: (ctx) => UserMarker(
+                                isMock: state.isMock,
                                 accuracy: state.accuracy,
                               ),
                             ),
