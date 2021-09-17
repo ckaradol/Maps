@@ -1,7 +1,10 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:map/screen/loginScreen.dart';
 import 'package:map/screen/map.dart';
 
+import 'bacground/Login/login_bloc.dart';
 
 
 Future<void> main() async {
@@ -20,7 +23,22 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home:Maps(),
+      home: BlocProvider(
+        create: (context) =>
+        LoginBloc()
+          ..add(LoginNullEvent()),
+        child: BlocBuilder<LoginBloc, LoginState>(
+          builder: (context, state) {
+            if(state is LoginNullState){
+              return LoginScreen();
+            }else if(state is LoginUserState||state is LoginCenterState) {
+              return Maps();
+            }else{
+              return Container();
+            }
+          },
+        ),
+      ),
     );
   }
 }
