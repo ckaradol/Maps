@@ -6,7 +6,7 @@ class DataModel extends  Equatable {
   late final String? userId;
   late final bool connect;
 
-  DataModel.fromJson(Map<dynamic, dynamic> json,String userId) {
+  DataModel.fromJson(Map<String, dynamic> json,String userId) {
     lat = json['lat'];
     lng = json['lng'];
     this.userId=userId;

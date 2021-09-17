@@ -88,7 +88,7 @@ class ZoomButtons extends StatelessWidget {
               },
               child: Icon(zoomButtonsOpts.zoomInIcon,
                   color: zoomButtonsOpts.zoomInColorIcon ??
-                      IconTheme.of(context).color),
+                      Colors.white),
             ),
           ),
           Padding(
@@ -111,7 +111,7 @@ class ZoomButtons extends StatelessWidget {
               },
               child: Icon(zoomButtonsOpts.zoomOutIcon,
                   color: zoomButtonsOpts.zoomOutColorIcon ??
-                      IconTheme.of(context).color),
+                      Colors.white),
             ),
           ),
         ],
