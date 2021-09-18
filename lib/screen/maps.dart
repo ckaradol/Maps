@@ -68,6 +68,21 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
   bool online = true;
 
   @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    mapController.mapEventStream.forEach((element) {
+      if (element.zoom > 18) {
+        mapController.move(mapController.center, 18);
+      } else if (element.zoom < 4) {
+        mapController.move(mapController.center, 4);
+      }
+    });
+  }
+
+  double km = 30;
+
+  @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => LocationBloc()
@@ -96,15 +111,26 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
                         ),
                         layers: [
                           TileLayerOptions(
-                            maxZoom: 18.9,
-                            maxNativeZoom: 18.9,
                             minNativeZoom: 4,
+                            maxNativeZoom: 18,
                             minZoom: 4,
+                            maxZoom: 18,
                             zoomReverse: false,
                             urlTemplate:
-                                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                                "https://www.google.com/maps/vt/pb=!1m4!1m3!1i{z}!2i{x}!3i{y}!2m3!1e0!2sm!3i420120488!3m7!2sen!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m1!1e0!23i4111425",
                             subdomains: ['a', 'b', 'c'],
                           ),
+                          if (loginState is LoginCenterState)
+                            CircleLayerOptions(
+                              circles: [
+                                CircleMarker(
+                                    point: state.locationData,
+                                    color: Colors.blue.shade50.withOpacity(0.7),
+                                    borderStrokeWidth: 2,
+                                    useRadiusInMeter: true,
+                                    radius: km),
+                              ],
+                            ),
                           if (loginState is LoginCenterState)
                             MarkerLayerOptions(
                               markers: loginState.marker!.map((e) {
