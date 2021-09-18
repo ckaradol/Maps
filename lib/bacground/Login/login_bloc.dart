@@ -1,35 +1,11 @@
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:location/location.dart';
 import 'package:map/bacground/model/dataModel.dart';
 import 'package:meta/meta.dart';
-/*
-db.get().then((data) {
-        print(data);
-        dataModel
-            .add(DataModel.fromJson(data.value as Map<dynamic, dynamic>, data.key!));
-        add(LoginSetStateEvent(center: true,marker: dataModel));
-      });
-      db.onChildChanged.forEach((data) {
-        dataModel.remove(data.snapshot.key);
-        dataModel
-            .add(DataModel.fromJson(data.snapshot.value as Map<dynamic, dynamic>, data.snapshot.key!));
-        add(LoginSetStateEvent(center: true,marker: dataModel));
-      });
-      db.onChildAdded.forEach((data) {
-        dataModel
-            .add(DataModel.fromJson(data.snapshot.value as Map<dynamic, dynamic>, data.snapshot.key!));
-        add(LoginSetStateEvent(center: true,marker: dataModel));
-      });
-      db.onChildRemoved.forEach((data) {
-        dataModel.remove(data.snapshot.key);
-        add(LoginSetStateEvent(center: true,marker: dataModel));
-      });
- */
 part 'login_event.dart';
 
 part 'login_state.dart';
@@ -42,49 +18,65 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     LoginEvent event,
   ) async* {
     if (event is LoginCenterEvent) {
-      var db = FirebaseDatabase.instance.reference().child("userLocation").orderByKey();
       List<DataModel> dataModel = [];
-      FirebaseFirestore.instance.collection("userLocation").snapshots().forEach((docs) {
-        docs.docChanges.forEach((doc) {
-          if(doc.doc.exists){
-            if(doc.type==DocumentChangeType.added){
-           if(doc.doc.data()!["connect"]==true){
-             dataModel
-                 .add(DataModel.fromJson(doc.doc.data()!, doc.doc.id));
-             if(state is LoginCenterState){
-               add(LoginSetStateEvent(center: true, marker: dataModel));
-             }
-           }
-            }
-            if(doc.type==DocumentChangeType.removed){
-              dataModel.remove(doc.doc.id);
-            }
-            if(doc.type==DocumentChangeType.modified){
-              dataModel.remove(doc.doc.id);
-             if(doc.doc.data()!["connect"]==true){
-               dataModel
-                   .add(DataModel.fromJson(doc.doc.data()!, doc.doc.id));
-               if(state is LoginCenterState){
-                 add(LoginSetStateEvent(center: true, marker: dataModel));
-               }
-             }
+      FirebaseDatabase.instance.goOnline(); //database online
+      var db = FirebaseDatabase.instance
+          .reference()
+          .child("userLocation"); //database location
+      if (dataModel.isEmpty) {
+        db.get().asStream().forEach((doc) {
+          if (doc.exists) {
+            if (doc.value["connect"] == true) {
+              dataModel.add(DataModel.fromJson(
+                  doc.value as Map<dynamic, dynamic>, doc.key!));
             }
           }
         });
+      }
+      db.onChildAdded.forEach((doc) {
+        //database added listen
+        if (doc.snapshot.exists) {
+          if (doc.snapshot.value["connect"] == true) {
+            dataModel.add(DataModel.fromJson(
+                doc.snapshot.value as Map<dynamic, dynamic>,
+                doc.snapshot.key!));
+          }
+        }
+      });
+      db.onChildChanged.forEach((doc) {
+        //database changed listen
+        if (doc.snapshot.exists) {
+          dataModel.remove(DataModel.fromJson(
+              doc.snapshot.value as Map<dynamic, dynamic>, doc.snapshot.key!));
+          if (doc.snapshot.value["connect"] == true) {
+            dataModel.add(DataModel.fromJson(
+                doc.snapshot.value as Map<dynamic, dynamic>,
+                doc.snapshot.key!));
+          }
+        }
+      });
+      db.onChildRemoved.forEach((doc) {
+        //database removed listen
+        if (doc.snapshot.exists) {
+          dataModel.remove(DataModel.fromJson(
+              doc.snapshot.value as Map<dynamic, dynamic>, doc.snapshot.key!));
+        }
       });
       add(LoginSetStateEvent(center: true, marker: dataModel));
     }
     if (event is LoginUserEvent) {
       UserCredential userCredential =
           await FirebaseAuth.instance.signInAnonymously();
+      var db = FirebaseDatabase.instance.reference().child("userLocation");
 
       FirebaseAuth.instance.authStateChanges().listen((user) async {
         if (user == null) {
           add(LoginNullEvent());
         } else {
+          FirebaseDatabase.instance.goOnline(); //connect database
           String userId = user.uid;
+          db.child(user.uid).onDisconnect().update({"connect": false});
           Location location = Location();
-
 
           bool _serviceEnabled;
           PermissionStatus _permissionGranted;
@@ -107,13 +99,24 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
           location.onLocationChanged
               .listen((LocationData currentLocation) async {
             if (currentLocation.isMock == false) {
-              if(user!=null) {
-                FirebaseFirestore.instance.collection("userLocation").doc(userId).set({
-                  "connect": true,
-                  "lat": currentLocation.latitude,
-                  "lng": currentLocation.longitude
-                });
-              }
+              db.child(userId).get().then((doc) {
+                if (doc.exists) {
+                  if (doc.value["connect"] == false) {
+                    return false;
+                  }
+                  db.child(userId).set({
+                    "connect": true,
+                    "lat": currentLocation.latitude,
+                    "lng": currentLocation.longitude
+                  });
+                } else {
+                  db.child(userId).set({
+                    "connect": true,
+                    "lat": currentLocation.latitude,
+                    "lng": currentLocation.longitude
+                  });
+                }
+              });
             }
           });
           add(LoginSetStateEvent(center: false, marker: null));
@@ -121,17 +124,13 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       });
     }
     if (event is LoginSetStateEvent) {
-      print(event.center);
       if (event.center) {
-
         yield LoginCenterState(event.marker);
       } else {
         yield LoginUserState();
       }
     }
     if (event is LoginNullEvent) {
-
-
       yield LoginNullState();
     }
   }

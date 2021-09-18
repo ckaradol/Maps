@@ -2,10 +2,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:map/screen/loginScreen.dart';
-import 'package:map/screen/map.dart';
+import 'package:map/screen/maps.dart';
 
 import 'bacground/Login/login_bloc.dart';
-
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,16 +23,14 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       home: BlocProvider(
-        create: (context) =>
-        LoginBloc()
-          ..add(LoginNullEvent()),
+        create: (context) => LoginBloc()..add(LoginNullEvent()),
         child: BlocBuilder<LoginBloc, LoginState>(
           builder: (context, state) {
-            if(state is LoginNullState){
+            if (state is LoginNullState) {
               return LoginScreen();
-            }else if(state is LoginUserState||state is LoginCenterState) {
+            } else if (state is LoginUserState || state is LoginCenterState) {
               return Maps();
-            }else{
+            } else {
               return Container();
             }
           },
@@ -42,4 +39,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
