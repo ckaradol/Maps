@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -69,6 +66,7 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
   }
 
   bool online = true;
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -150,12 +148,17 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
                                     online ? Colors.red : Colors.blue)),
                             onPressed: () {
                               if (online == true) {
-                                FirebaseDatabase.instance.goOffline();
+                                context
+                                    .read<LoginBloc>()
+                                    .add(LoginOfflineEvent());
                                 setState(() {
                                   online = false;
                                 });
                               } else {
-                                FirebaseDatabase.instance.goOnline();
+                                context
+                                    .read<LoginBloc>()
+                                    .add(LoginOnlineEvent());
+
                                 setState(() {
                                   online = true;
                                 });
