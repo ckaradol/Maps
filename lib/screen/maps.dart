@@ -1,14 +1,19 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map/plugin_api.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:map/bacground/Login/login_bloc.dart';
 import 'package:map/bacground/location/location_bloc.dart';
 import 'package:map/compenent/dataMarker.dart';
 import 'package:map/compenent/userMarker.dart';
 import 'package:map/compenent/zoombuttons_plugin_option.dart';
+
+const double maxMetre = 30000;
+const double minMetre = 300;
 
 class Maps extends StatefulWidget {
   const Maps({
@@ -67,20 +72,24 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
 
   bool online = true;
 
+  double km = 300;
+
+  Distance distance = Distance();
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    mapController.mapEventStream.forEach((element) {
-      if (element.zoom > 18) {
-        mapController.move(mapController.center, 18);
-      } else if (element.zoom < 4) {
-        mapController.move(mapController.center, 4);
-      }
+    mapController.mapEventStream.forEach((map) {
+      setState(() {
+        if (map.zoom <= 6) {
+          km = maxMetre;
+        } else if (map.zoom <= 12) {
+          km = maxMetre / 2;
+        } else {
+          km = maxMetre / 3;
+        }
+      });
     });
   }
-
-  double km = 30;
 
   @override
   Widget build(BuildContext context) {
@@ -103,18 +112,16 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
                       FlutterMap(
                         mapController: mapController,
                         options: MapOptions(
+                          minZoom: 1,
+                          maxZoom: 18,
                           center: state.locationData,
-                          zoom: 5.0,
+                          zoom: 17,
                           plugins: [
                             ZoomButtonsPlugin(),
                           ],
                         ),
                         layers: [
                           TileLayerOptions(
-                            minNativeZoom: 4,
-                            maxNativeZoom: 18,
-                            minZoom: 4,
-                            maxZoom: 18,
                             zoomReverse: false,
                             urlTemplate:
                                 "https://www.google.com/maps/vt/pb=!1m4!1m3!1i{z}!2i{x}!3i{y}!2m3!1e0!2sm!3i420120488!3m7!2sen!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m1!1e0!23i4111425",
@@ -126,9 +133,7 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
                                 CircleMarker(
                                     point: state.locationData,
                                     color: Colors.blue.shade50.withOpacity(0.7),
-                                    borderStrokeWidth: 2,
-                                    useRadiusInMeter: true,
-                                    radius: km),
+                                    radius: 150),
                               ],
                             ),
                           if (loginState is LoginCenterState)
