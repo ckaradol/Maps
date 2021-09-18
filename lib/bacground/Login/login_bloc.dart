@@ -6,6 +6,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:location/location.dart';
 import 'package:map/bacground/model/dataModel.dart';
 import 'package:meta/meta.dart';
+
 part 'login_event.dart';
 
 part 'login_state.dart';
@@ -122,6 +123,25 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
           add(LoginSetStateEvent(center: false, marker: null));
         }
       });
+    }
+    if (event is LoginOnlineEvent) {
+      var user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        var db = FirebaseDatabase.instance
+            .reference()
+            .child("userLocation")
+            .child(user.uid);
+        FirebaseDatabase.instance.goOnline();
+        db.onDisconnect().set({"connect": false});
+
+        db.update({
+          "connect": true,
+        });
+      }
+    }
+    if (event is LoginOfflineEvent) {
+      FirebaseDatabase.instance.goOffline();
     }
     if (event is LoginSetStateEvent) {
       if (event.center) {
