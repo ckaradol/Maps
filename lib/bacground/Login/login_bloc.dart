@@ -20,124 +20,142 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
   ) async* {
     if (event is LoginCenterEvent) {
       List<DataModel> dataModel = [];
-      FirebaseDatabase.instance.goOnline(); //database online
-      var db = FirebaseDatabase.instance
-          .reference()
-          .child("userLocation"); //database location
-      if (dataModel.isEmpty) {
-        db.get().asStream().forEach((doc) {
-          if (doc.exists) {
-            if (doc.value["connect"] == true) {
+      try {
+        FirebaseDatabase.instance.goOnline(); //database online
+        var db = FirebaseDatabase.instance
+            .reference()
+            .child("userLocation"); //database location
+        if (dataModel.isEmpty) {
+          db.get().asStream().forEach((doc) {
+            if (doc.exists) {
+              if (doc.value["connect"] == true) {
+                dataModel.add(DataModel.fromJson(
+                    doc.value as Map<dynamic, dynamic>, doc.key!));
+              }
+            }
+          });
+        }
+        db.onChildAdded.forEach((doc) {
+          //database added listen
+          if (doc.snapshot.exists) {
+            if (doc.snapshot.value["connect"] == true) {
               dataModel.add(DataModel.fromJson(
-                  doc.value as Map<dynamic, dynamic>, doc.key!));
+                  doc.snapshot.value as Map<dynamic, dynamic>,
+                  doc.snapshot.key!));
             }
           }
         });
+        db.onChildChanged.forEach((doc) {
+          //database changed listen
+          if (doc.snapshot.exists) {
+            dataModel.remove(DataModel.fromJson(
+                doc.snapshot.value as Map<dynamic, dynamic>,
+                doc.snapshot.key!));
+            if (doc.snapshot.value["connect"] == true) {
+              dataModel.add(DataModel.fromJson(
+                  doc.snapshot.value as Map<dynamic, dynamic>,
+                  doc.snapshot.key!));
+            }
+          }
+        });
+        db.onChildRemoved.forEach((doc) {
+          //database removed listen
+          if (doc.snapshot.exists) {
+            dataModel.remove(DataModel.fromJson(
+                doc.snapshot.value as Map<dynamic, dynamic>,
+                doc.snapshot.key!));
+          }
+        });
+        add(LoginSetStateEvent(center: true, marker: dataModel));
+      } on FirebaseException catch (e) {
+        add(LoginErrorEvent(e.message!));
       }
-      db.onChildAdded.forEach((doc) {
-        //database added listen
-        if (doc.snapshot.exists) {
-          if (doc.snapshot.value["connect"] == true) {
-            dataModel.add(DataModel.fromJson(
-                doc.snapshot.value as Map<dynamic, dynamic>,
-                doc.snapshot.key!));
-          }
-        }
-      });
-      db.onChildChanged.forEach((doc) {
-        //database changed listen
-        if (doc.snapshot.exists) {
-          dataModel.remove(DataModel.fromJson(
-              doc.snapshot.value as Map<dynamic, dynamic>, doc.snapshot.key!));
-          if (doc.snapshot.value["connect"] == true) {
-            dataModel.add(DataModel.fromJson(
-                doc.snapshot.value as Map<dynamic, dynamic>,
-                doc.snapshot.key!));
-          }
-        }
-      });
-      db.onChildRemoved.forEach((doc) {
-        //database removed listen
-        if (doc.snapshot.exists) {
-          dataModel.remove(DataModel.fromJson(
-              doc.snapshot.value as Map<dynamic, dynamic>, doc.snapshot.key!));
-        }
-      });
-      add(LoginSetStateEvent(center: true, marker: dataModel));
     }
     if (event is LoginUserEvent) {
-      UserCredential userCredential =
-          await FirebaseAuth.instance.signInAnonymously();
-      var db = FirebaseDatabase.instance.reference().child("userLocation");
+      try {
+        await FirebaseAuth.instance.signInAnonymously();
+        var db = FirebaseDatabase.instance.reference().child("userLocation");
+        FirebaseAuth.instance.authStateChanges().listen((user) async {
+          if (user == null) {
+            add(LoginNullEvent());
+          } else {
+            try {
+              FirebaseDatabase.instance.goOnline(); //connect database
+              String userId = user.uid;
+              db.child(user.uid).onDisconnect().update({"connect": false});
+              Location location = Location();
 
-      FirebaseAuth.instance.authStateChanges().listen((user) async {
-        if (user == null) {
-          add(LoginNullEvent());
-        } else {
-          FirebaseDatabase.instance.goOnline(); //connect database
-          String userId = user.uid;
-          db.child(user.uid).onDisconnect().update({"connect": false});
-          Location location = Location();
+              bool _serviceEnabled;
+              PermissionStatus _permissionGranted;
 
-          bool _serviceEnabled;
-          PermissionStatus _permissionGranted;
+              _serviceEnabled = await location.serviceEnabled();
+              if (!_serviceEnabled) {
+                _serviceEnabled = await location.requestService();
+                if (!_serviceEnabled) {
+                  return;
+                }
+              }
 
-          _serviceEnabled = await location.serviceEnabled();
-          if (!_serviceEnabled) {
-            _serviceEnabled = await location.requestService();
-            if (!_serviceEnabled) {
-              return;
-            }
-          }
-
-          _permissionGranted = await location.hasPermission();
-          if (_permissionGranted == PermissionStatus.denied) {
-            _permissionGranted = await location.requestPermission();
-            if (_permissionGranted != PermissionStatus.granted) {
-              return;
-            }
-          }
-          location.onLocationChanged
-              .listen((LocationData currentLocation) async {
-            if (currentLocation.isMock == false) {
-              db.child(userId).get().then((doc) {
-                if (doc.exists) {
-                  if (doc.value["connect"] == false) {
-                    return false;
-                  }
-                  db.child(userId).set({
-                    "connect": true,
-                    "lat": currentLocation.latitude,
-                    "lng": currentLocation.longitude
-                  });
-                } else {
-                  db.child(userId).set({
-                    "connect": true,
-                    "lat": currentLocation.latitude,
-                    "lng": currentLocation.longitude
+              _permissionGranted = await location.hasPermission();
+              if (_permissionGranted == PermissionStatus.denied) {
+                _permissionGranted = await location.requestPermission();
+                if (_permissionGranted != PermissionStatus.granted) {
+                  return;
+                }
+              }
+              location.onLocationChanged
+                  .listen((LocationData currentLocation) async {
+                if (currentLocation.isMock == false) {
+                  db.child(userId).get().then((doc) {
+                    if (doc.exists) {
+                      if (doc.value["connect"] == false) {
+                        return false;
+                      }
+                      db.child(userId).set({
+                        "connect": true,
+                        "lat": currentLocation.latitude,
+                        "lng": currentLocation.longitude
+                      });
+                    } else {
+                      db.child(userId).set({
+                        "connect": true,
+                        "lat": currentLocation.latitude,
+                        "lng": currentLocation.longitude
+                      });
+                    }
                   });
                 }
               });
+              add(LoginSetStateEvent(center: false, marker: null));
+            } on FirebaseException catch (e) {
+              add(LoginErrorEvent(e.message!));
             }
-          });
-          add(LoginSetStateEvent(center: false, marker: null));
-        }
-      });
+          }
+        });
+      } on FirebaseAuthException catch (e) {
+        add(LoginErrorEvent(e.message!));
+      }
     }
     if (event is LoginOnlineEvent) {
       var user = FirebaseAuth.instance.currentUser;
 
       if (user != null) {
-        var db = FirebaseDatabase.instance
-            .reference()
-            .child("userLocation")
-            .child(user.uid);
-        FirebaseDatabase.instance.goOnline();
-        db.onDisconnect().set({"connect": false});
+        try {
+          var db = FirebaseDatabase.instance
+              .reference()
+              .child("userLocation")
+              .child(user.uid);
+          FirebaseDatabase.instance.goOnline();
+          db.onDisconnect().set({"connect": false});
 
-        db.update({
-          "connect": true,
-        });
+          db.update({
+            "connect": true,
+          });
+        } on FirebaseException catch (e) {
+          add(LoginErrorEvent(e.message!));
+        }
+      } else {
+        add(LoginNullEvent());
       }
     }
     if (event is LoginOfflineEvent) {
@@ -149,6 +167,9 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       } else {
         yield LoginUserState();
       }
+    }
+    if (event is LoginErrorEvent) {
+      yield LoginErrorState(event.error);
     }
     if (event is LoginNullEvent) {
       yield LoginNullState();

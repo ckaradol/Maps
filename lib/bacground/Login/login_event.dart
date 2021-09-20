@@ -11,6 +11,12 @@ class LoginOnlineEvent extends LoginEvent {}
 
 class LoginOfflineEvent extends LoginEvent {}
 
+class LoginErrorEvent extends LoginEvent {
+  final String error;
+
+  LoginErrorEvent(this.error);
+}
+
 class LoginNullEvent extends LoginEvent {}
 
 class LoginSetStateEvent extends LoginEvent {

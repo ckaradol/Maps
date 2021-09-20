@@ -1,12 +1,15 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:map/screen/errorScreen.dart';
 import 'package:map/screen/loginScreen.dart';
 import 'package:map/screen/maps.dart';
+import 'package:map/screen/networkErrorScreen.dart';
 
 import 'bacground/Login/login_bloc.dart';
 import 'bacground/calculatorMeter/calculator_meter_bloc.dart';
 import 'bacground/location/location_bloc.dart';
+import 'bacground/networkConnectivity/connectivity_bloc.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +29,30 @@ class MyApp extends StatelessWidget {
       ),
       home: BlocProvider(
         create: (context) => LocationBloc()..add(LocationInitialEvent()),
-        child: Home(),
+        child: BlocProvider(
+            create: (context) =>
+                ConnectivityBloc()..add(ConnectivityInitialEvent()),
+            child: BlocListener<ConnectivityBloc, ConnectNetwork>(
+              listener: (context, state) {
+                if (state == ConnectNetwork.None) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text("Network Error"),
+                      content: NetworkErrorScreen(),
+                      actions: [
+                        TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: Text("Ok"))
+                      ],
+                    ),
+                  );
+                }
+              },
+              child: Home(),
+            )),
       ),
     );
   }
@@ -63,6 +89,8 @@ class Home extends StatelessWidget {
                 ),
               );
             }
+          } else if (state is LoginErrorState) {
+            return ErrorScreen();
           } else {
             return Container();
           }
