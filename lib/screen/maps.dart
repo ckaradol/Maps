@@ -1,12 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map/plugin_api.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:map/bacground/Login/login_bloc.dart';
+import 'package:map/bacground/calculatorMeter/calculator_meter_bloc.dart';
 import 'package:map/bacground/location/location_bloc.dart';
 import 'package:map/compenent/dataMarker.dart';
 import 'package:map/compenent/userMarker.dart';
@@ -75,80 +75,107 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
   double km = 300;
 
   Distance distance = Distance();
+
   @override
   void initState() {
     super.initState();
-    mapController.mapEventStream.forEach((map) {
-      setState(() {
-        if (map.zoom <= 6) {
-          km = maxMetre;
-        } else if (map.zoom <= 12) {
-          km = maxMetre / 2;
-        } else {
-          km = maxMetre / 3;
-        }
-      });
-    });
+    LoginState loginState = context.read<LoginBloc>().state;
+    LocationState locationState = context.read<LocationBloc>().state;
+    if (loginState is LoginCenterState) {
+      if (locationState is LocationSetState)
+        mapController.mapEventStream.forEach((map) {
+          context.read<CalculatorMeterBloc>().add(SetMeterEvent(
+              location: locationState.locationData,
+              data: loginState.marker!,
+              zoom: map.zoom));
+        });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => LocationBloc()
-        ..add(LocationInitialEvent()), //data provider locationBloc starts first
-      child: BlocBuilder<LocationBloc, LocationState>(
-        builder: (context, state) {
-          // SetStated field when location Bloc state changes
-          if (state is LocationSetState) {
-            LoginState loginState = context.read<LoginBloc>().state;
-            return WillPopScope(
-              onWillPop: () {
-                return onWillPop();
-              },
-              child: SafeArea(
-                child: Scaffold(
-                  body: Stack(
-                    children: [
-                      FlutterMap(
-                        mapController: mapController,
-                        options: MapOptions(
-                          minZoom: 1,
-                          maxZoom: 18,
-                          center: state.locationData,
-                          zoom: 17,
-                          plugins: [
-                            ZoomButtonsPlugin(),
-                          ],
+    return BlocBuilder<LocationBloc, LocationState>(
+      builder: (context, state) {
+        // SetStated field when location Bloc state changes
+        if (state is LocationSetState) {
+          LoginState loginState = context.read<LoginBloc>().state;
+          return WillPopScope(
+            onWillPop: () {
+              return onWillPop();
+            },
+            child: SafeArea(
+              child: Scaffold(
+                body: Stack(
+                  children: [
+                    FlutterMap(
+                      mapController: mapController,
+                      options: MapOptions(
+                        minZoom: 1,
+                        maxZoom: 18,
+                        center: state.locationData,
+                        zoom: 17,
+                        plugins: [
+                          ZoomButtonsPlugin(),
+                        ],
+                      ),
+                      nonRotatedLayers: [
+                        ZoomButtonsPluginOption(
+                          mini: true,
+                          padding: 10,
+                          alignment: Alignment.bottomLeft,
                         ),
-                        layers: [
-                          TileLayerOptions(
+                      ],
+                      children: [
+                        TileLayerWidget(
+                          options: TileLayerOptions(
                             zoomReverse: false,
                             urlTemplate:
                                 "https://www.google.com/maps/vt/pb=!1m4!1m3!1i{z}!2i{x}!3i{y}!2m3!1e0!2sm!3i420120488!3m7!2sen!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m1!1e0!23i4111425",
                             subdomains: ['a', 'b', 'c'],
                           ),
-                          if (loginState is LoginCenterState)
-                            CircleLayerOptions(
-                              circles: [
-                                CircleMarker(
-                                    point: state.locationData,
-                                    color: Colors.blue.shade50.withOpacity(0.7),
-                                    radius: 150),
-                              ],
-                            ),
-                          if (loginState is LoginCenterState)
-                            MarkerLayerOptions(
-                              markers: loginState.marker!.map((e) {
-                                return Marker(
-                                  width: 80,
-                                  height: 80,
-                                  point: LatLng(e.lat!, e.lng!),
-                                  builder: (ctx) => DataMarker(),
+                        ),
+                        if (loginState is LoginCenterState)
+                          BlocBuilder<CalculatorMeterBloc,
+                              CalculatorMeterState>(
+                            builder: (context, calculatorMeterState) {
+                              if (calculatorMeterState is SetMeter)
+                                return Stack(
+                                  children: [
+                                    MarkerLayerWidget(
+                                      options: MarkerLayerOptions(
+                                        markers:
+                                            calculatorMeterState.data.map((e) {
+                                          return Marker(
+                                            width: 80,
+                                            height: 80,
+                                            point: LatLng(e.lat!, e.lng!),
+                                            builder: (ctx) => DataMarker(),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
+                                    CircleLayerWidget(
+                                      options: CircleLayerOptions(
+                                        circles: [
+                                          CircleMarker(
+                                              point: state.locationData,
+                                              color: Colors.blue.shade50
+                                                  .withOpacity(0.7),
+                                              useRadiusInMeter: true,
+                                              radius:
+                                                  calculatorMeterState.meter),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 );
-                              }).toList(),
-                            ),
-                          if (online)
-                            MarkerLayerOptions(markers: [
+                              else
+                                return Container();
+                            },
+                          ),
+                        if (online)
+                          MarkerLayerWidget(
+                            options: MarkerLayerOptions(markers: [
                               Marker(
                                 width:
                                     state.accuracy <= 60 ? state.accuracy : 20,
@@ -161,66 +188,57 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
                                 ),
                               ),
                             ]),
-                        ],
-                        nonRotatedLayers: [
-                          ZoomButtonsPluginOption(
-                            mini: true,
-                            padding: 10,
-                            alignment: Alignment.bottomLeft,
                           ),
-                        ],
-                      ),
-                      if (loginState is LoginUserState)
-                        Container(
-                          alignment: Alignment.bottomCenter,
-                          child: ElevatedButton(
-                            style: ButtonStyle(
-                                backgroundColor: MaterialStateProperty.all(
-                                    online ? Colors.red : Colors.blue)),
-                            onPressed: () {
-                              if (online == true) {
-                                context
-                                    .read<LoginBloc>()
-                                    .add(LoginOfflineEvent());
-                                setState(() {
-                                  online = false;
-                                });
-                              } else {
-                                context
-                                    .read<LoginBloc>()
-                                    .add(LoginOnlineEvent());
-
-                                setState(() {
-                                  online = true;
-                                });
-                              }
-                            },
-                            child: Text(online ? "Not Login" : "Login"),
-                          ),
-                        )
-                    ],
-                  ),
-                  floatingActionButton: FloatingActionButton(
-                    child: Icon(
-                      Icons.location_on_rounded,
-                      color: Colors.white,
+                      ],
                     ),
-                    onPressed: () {
-                      _animatedMapMove(state.locationData, 17.0);
-                    },
+                    if (loginState is LoginUserState)
+                      Container(
+                        alignment: Alignment.bottomCenter,
+                        child: ElevatedButton(
+                          style: ButtonStyle(
+                              backgroundColor: MaterialStateProperty.all(
+                                  online ? Colors.red : Colors.blue)),
+                          onPressed: () {
+                            if (online == true) {
+                              context
+                                  .read<LoginBloc>()
+                                  .add(LoginOfflineEvent());
+                              setState(() {
+                                online = false;
+                              });
+                            } else {
+                              context.read<LoginBloc>().add(LoginOnlineEvent());
+
+                              setState(() {
+                                online = true;
+                              });
+                            }
+                          },
+                          child: Text(online ? "Not Login" : "Login"),
+                        ),
+                      )
+                  ],
+                ),
+                floatingActionButton: FloatingActionButton(
+                  child: Icon(
+                    Icons.location_on_rounded,
+                    color: Colors.white,
                   ),
+                  onPressed: () {
+                    _animatedMapMove(state.locationData, 17.0);
+                  },
                 ),
               ),
-            );
-          } else {
-            return Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
-              ),
-            ); //loading event
-          }
-        },
-      ),
+            ),
+          );
+        } else {
+          return Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          ); //loading event
+        }
+      },
     );
   }
 }
