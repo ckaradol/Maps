@@ -43,7 +43,9 @@ class CalculatorMeterBloc
             meter = maxMeter / (event.zoom * event.zoom * 5);
           } else if (event.zoom > 8 && event.zoom < 10) {
             meter = maxMeter / (event.zoom * event.zoom * 7);
-          } else if (event.zoom > 10 && event.zoom < 14) {
+          } else if (event.zoom > 10 && event.zoom < 12) {
+            meter = maxMeter / (event.zoom * event.zoom * 10);
+          } else if (event.zoom > 12 && event.zoom < 14) {
             meter = maxMeter / (event.zoom * event.zoom * event.zoom * 3);
           } else if (event.zoom > 14) {
             meter =
@@ -71,7 +73,9 @@ class CalculatorMeterBloc
             meter = maxMeter / (event.zoom * event.zoom * 5);
           } else if (event.zoom > 8 && event.zoom < 10) {
             meter = maxMeter / (event.zoom * event.zoom * 7);
-          } else if (event.zoom > 10 && event.zoom < 14) {
+          } else if (event.zoom > 10 && event.zoom < 12) {
+            meter = maxMeter / (event.zoom * event.zoom * 10);
+          } else if (event.zoom > 12 && event.zoom < 14) {
             meter = maxMeter / (event.zoom * event.zoom * event.zoom * 3);
           } else if (event.zoom > 14) {
             meter =
