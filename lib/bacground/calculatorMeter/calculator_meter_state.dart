@@ -8,6 +8,6 @@ class CalculatorMeterInitial extends CalculatorMeterState {}
 class SetMeter extends CalculatorMeterState {
   final double zoom;
   final double meter;
-  final List<DataModel> data;
-  SetMeter({required this.meter, required this.data, required this.zoom});
+
+  SetMeter({required this.meter, required this.zoom});
 }

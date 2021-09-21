@@ -7,7 +7,9 @@ import 'package:flutter_map/plugin_api.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:map/bacground/Login/login_bloc.dart';
 import 'package:map/bacground/calculatorMeter/calculator_meter_bloc.dart';
+import 'package:map/bacground/calculatorMeterNetwork/calculator_meter_network_bloc.dart';
 import 'package:map/bacground/location/location_bloc.dart';
+import 'package:map/bacground/model/dataModel.dart';
 import 'package:map/compenent/dataMarker.dart';
 import 'package:map/compenent/userMarker.dart';
 import 'package:map/compenent/zoombuttons_plugin_option.dart';
@@ -135,36 +137,71 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
                     if (loginState is LoginCenterState)
                       BlocBuilder<CalculatorMeterBloc, CalculatorMeterState>(
                         builder: (context, calculatorMeterState) {
-                          if (calculatorMeterState is SetMeter)
-                            return Stack(
-                              children: [
-                                MarkerLayerWidget(
-                                  options: MarkerLayerOptions(
-                                    markers: calculatorMeterState.data.map((e) {
-                                      return Marker(
-                                        width: 80,
-                                        height: 80,
-                                        point: LatLng(e.lat!, e.lng!),
-                                        builder: (ctx) => DataMarker(),
-                                      );
-                                    }).toList(),
-                                  ),
-                                ),
-                                CircleLayerWidget(
-                                  options: CircleLayerOptions(
-                                    circles: [
-                                      CircleMarker(
-                                          point: locationState.locationData,
-                                          color: Colors.blue.shade50
-                                              .withOpacity(0.7),
-                                          useRadiusInMeter: true,
-                                          radius: calculatorMeterState.meter),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                          if (calculatorMeterState is SetMeter) {
+                            return BlocProvider(
+                              create: (context) => CalculatorMeterNetworkBloc()
+                                ..add(InitialEvent()),
+                              child: BlocBuilder<CalculatorMeterNetworkBloc,
+                                  CalculatorMeterNetworkState>(
+                                builder: (context, state) {
+                                  if (state is CalculatorMeterNetworkListen)
+                                    return Stack(
+                                      children: [
+                                        Builder(builder: (context) {
+                                          List<DataModel> data = [];
+                                          for (var model in state.data) {
+                                            if (model.lat != null &&
+                                                model.lng != null) {
+                                              LatLng user = LatLng(
+                                                  model.lat!, model.lng!);
+                                              Distance distance = Distance();
+                                              double userMeter = distance.as(
+                                                  LengthUnit.Meter,
+                                                  user,
+                                                  locationState
+                                                      .locationData); //latlng 1 and latlng2 calculate meters between
+                                              if (userMeter <=
+                                                  calculatorMeterState.meter) {
+                                                data.add(model);
+                                              }
+                                            }
+                                          }
+                                          return MarkerLayerWidget(
+                                            options: MarkerLayerOptions(
+                                              markers: data.map((e) {
+                                                return Marker(
+                                                  width: 80,
+                                                  height: 80,
+                                                  point: LatLng(e.lat!, e.lng!),
+                                                  builder: (ctx) =>
+                                                      DataMarker(),
+                                                );
+                                              }).toList(),
+                                            ),
+                                          );
+                                        }),
+                                        CircleLayerWidget(
+                                          options: CircleLayerOptions(
+                                            circles: [
+                                              CircleMarker(
+                                                  point: locationState
+                                                      .locationData,
+                                                  color: Colors.blue.shade50
+                                                      .withOpacity(0.7),
+                                                  useRadiusInMeter: true,
+                                                  radius: calculatorMeterState
+                                                      .meter),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  else
+                                    return Container();
+                                },
+                              ),
                             );
-                          else
+                          } else
                             return Container();
                         },
                       ),
