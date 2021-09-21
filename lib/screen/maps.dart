@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map/plugin_api.dart';
 import 'package:latlong2/latlong.dart';
@@ -11,8 +13,10 @@ import 'package:map/bacground/calculatorMeterNetwork/calculator_meter_network_bl
 import 'package:map/bacground/location/location_bloc.dart';
 import 'package:map/bacground/model/dataModel.dart';
 import 'package:map/compenent/dataMarker.dart';
+import 'package:map/compenent/paintTriangle.dart';
 import 'package:map/compenent/userMarker.dart';
 import 'package:map/compenent/zoombuttons_plugin_option.dart';
+import 'dart:math' as math;
 
 const double maxMetre = 30000;
 const double minMetre = 300;
@@ -207,22 +211,77 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
                       ),
                     if (online)
                       MarkerLayerWidget(
-                        options: MarkerLayerOptions(markers: [
-                          Marker(
-                            width: locationState.accuracy <= 60
-                                ? locationState.accuracy
-                                : 20,
-                            height: locationState.accuracy <= 60
-                                ? locationState.accuracy
-                                : 20,
-                            point: locationState.locationData,
-                            builder: (ctx) => UserMarker(
-                              isMock: locationState.isMock,
-                              accuracy: locationState.accuracy,
+                        options: MarkerLayerOptions(
+                          markers: [
+                            Marker(
+                              width: locationState.accuracy <= 60
+                                  ? locationState.accuracy
+                                  : 20,
+                              height: locationState.accuracy <= 60
+                                  ? locationState.accuracy
+                                  : 20,
+                              point: locationState.locationData,
+                              builder: (ctx) => UserMarker(
+                                isMock: locationState.isMock,
+                                accuracy: locationState.accuracy,
+                              ),
                             ),
-                          ),
-                        ]),
+                          ],
+                        ),
                       ),
+                    if (online)
+                      MarkerLayerWidget(
+                          options: MarkerLayerOptions(markers: [
+                        Marker(
+                            width: 80,
+                            height: 80,
+                            point: locationState.locationData,
+                            builder: (BuildContext context) {
+                              return StreamBuilder<CompassEvent>(
+                                stream: FlutterCompass.events,
+                                builder: (context, snapshot) {
+                                  if (snapshot.hasError) {
+                                    return Text(
+                                        'Error reading heading: ${snapshot.error}');
+                                  }
+
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.waiting) {
+                                    return Center(
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  }
+
+                                  double? direction = snapshot.data!.heading;
+
+                                  // if direction is null, then device does not support this sensor
+                                  // show error message
+                                  if (direction == null)
+                                    return Center(
+                                      child: Text(
+                                          "Device does not have sensors !"),
+                                    );
+
+                                  return Transform.rotate(
+                                    angle: (direction * (math.pi / 180)),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          color: Colors.transparent,
+                                          width: 30,
+                                          height: 30,
+                                          child: CustomPaint(
+                                            painter: PaintTriangle(),
+                                            child: Container(),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                            })
+                      ]))
                   ],
                 ),
                 if (loginState is LoginUserState)

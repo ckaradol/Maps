@@ -15,7 +15,7 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
   Stream<LocationState> mapEventToState(
     LocationEvent event,
   ) async* {
-    if(event is LocationInitialEvent){
+    if (event is LocationInitialEvent) {
       Location location = Location();
 
       bool _serviceEnabled;
@@ -39,10 +39,12 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
       location.onLocationChanged.listen((LocationData currentLocation) {
         add(LocationSetStateEvent(data: currentLocation));
       });
-
     }
-    if(event is LocationSetStateEvent){
-      yield LocationSetState(locationData:LatLng(event.data.latitude!,event.data.longitude!),accuracy:event.data.accuracy!,isMock: event.data.isMock);
+    if (event is LocationSetStateEvent) {
+      yield LocationSetState(
+          locationData: LatLng(event.data.latitude!, event.data.longitude!),
+          accuracy: event.data.accuracy!,
+          isMock: event.data.isMock);
     }
   }
 }
