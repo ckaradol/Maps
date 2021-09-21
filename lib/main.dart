@@ -70,25 +70,30 @@ class Home extends StatelessWidget {
       create: (context) => LoginBloc()..add(LoginNullEvent()),
       child: BlocBuilder<LoginBloc, LoginState>(
         builder: (context, state) {
+          print(state);
           if (state is LoginNullState) {
             return LoginScreen();
           } else if (state is LoginUserState || state is LoginCenterState) {
-            if (locationState is LocationSetState) {
-              return BlocProvider(
-                create: (context) => CalculatorMeterBloc()
-                  ..add(InitialCalculatorMeter(
-                      zoom: 17,
-                      location: locationState.locationData,
-                      data: state is LoginCenterState ? state.marker! : [])),
-                child: Maps(),
-              );
-            } else {
-              return Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-            }
+            print(locationState);
+            return BlocBuilder<LocationBloc, LocationState>(
+              builder: (context, locationState) {
+                if (locationState is LocationSetState) {
+                  return BlocProvider(
+                    create: (context) => CalculatorMeterBloc()
+                      ..add(InitialCalculatorMeter(
+                          zoom: 17,
+                          location: locationState.locationData,
+                          data:
+                              state is LoginCenterState ? state.marker! : [])),
+                    child: Maps(),
+                  );
+                } else {
+                  return Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+              },
+            );
           } else if (state is LoginErrorState) {
             return ErrorScreen();
           } else {
