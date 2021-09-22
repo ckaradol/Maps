@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:map/bacground/Login/login_bloc.dart';
 
-class NetworkErrorScreen extends StatelessWidget {
-  const NetworkErrorScreen({Key? key}) : super(key: key);
+class ErrorPopUpScreen extends StatelessWidget {
+  final String error;
+
+  const ErrorPopUpScreen({Key? key, required this.error}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -13,17 +15,14 @@ class NetworkErrorScreen extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.all(20),
-          child: IconButton(
-            onPressed: () {},
-            icon: Icon(
-              Icons.error_outline,
-              color: Colors.red,
-              size: 45,
-            ),
+          child: Icon(
+            Icons.error_outline,
+            color: Colors.red,
+            size: 45,
           ),
         ),
         Text(
-          "Network Error Mobile Network or Wifi Network Connecting Please",
+          error,
           textAlign: TextAlign.center,
         ),
       ],

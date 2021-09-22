@@ -1,13 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:map/screen/errorScreen.dart';
-import 'package:map/screen/loginScreen.dart';
-import 'package:map/screen/maps.dart';
-import 'package:map/screen/networkErrorScreen.dart';
-
-import 'bacground/Login/login_bloc.dart';
-import 'bacground/calculatorMeter/calculator_meter_bloc.dart';
+import 'package:map/screen/home.dart';
+import 'package:map/screen/ErrorPopUpScreen.dart';
 import 'bacground/location/location_bloc.dart';
 import 'bacground/networkConnectivity/connectivity_bloc.dart';
 
@@ -39,7 +34,7 @@ class MyApp extends StatelessWidget {
                     context: context,
                     builder: (context) => AlertDialog(
                       title: Text("Network Error"),
-                      content: NetworkErrorScreen(),
+                      content: ErrorPopUpScreen(error: "Network Error Mobile Network or Wifi Network Connecting Please",),
                       actions: [
                         TextButton(
                             onPressed: () {
@@ -58,49 +53,3 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class Home extends StatelessWidget {
-  const Home({
-    Key? key,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    LocationState locationState = context.read<LocationBloc>().state;
-    return BlocProvider(
-      create: (context) => LoginBloc()..add(LoginNullEvent()),
-      child: BlocBuilder<LoginBloc, LoginState>(
-        builder: (context, state) {
-          print(state);
-          if (state is LoginNullState) {
-            return LoginScreen();
-          } else if (state is LoginUserState || state is LoginCenterState) {
-            print(locationState);
-            return BlocBuilder<LocationBloc, LocationState>(
-              builder: (context, locationState) {
-                if (locationState is LocationSetState) {
-                  return BlocProvider(
-                    create: (context) => CalculatorMeterBloc()
-                      ..add(InitialCalculatorMeter(
-                          zoom: 17,
-                          location: locationState.locationData,
-                          data:
-                              state is LoginCenterState ? state.marker! : [])),
-                    child: Maps(),
-                  );
-                } else {
-                  return Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
-              },
-            );
-          } else if (state is LoginErrorState) {
-            return ErrorScreen();
-          } else {
-            return Container();
-          }
-        },
-      ),
-    );
-  }
-}

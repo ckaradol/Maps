@@ -3,20 +3,17 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map/plugin_api.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:map/bacground/Login/login_bloc.dart';
 import 'package:map/bacground/calculatorMeter/calculator_meter_bloc.dart';
-import 'package:map/bacground/calculatorMeterNetwork/calculator_meter_network_bloc.dart';
 import 'package:map/bacground/location/location_bloc.dart';
-import 'package:map/bacground/model/dataModel.dart';
-import 'package:map/compenent/dataMarker.dart';
-import 'package:map/compenent/paintTriangle.dart';
+import 'package:map/compenent/circleCalculatorMeterWidget.dart';
+import 'package:map/compenent/loadingScreen.dart';
 import 'package:map/compenent/userMarker.dart';
+import 'package:map/compenent/userGyroscopeMarkerLayerWidget.dart';
 import 'package:map/compenent/zoombuttons_plugin_option.dart';
-import 'dart:math' as math;
 
 const double maxMetre = 30000;
 const double minMetre = 300;
@@ -45,7 +42,7 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
     // Create a animation controller that has a duration and a TickerProvider.
     var controller = AnimationController(
         duration: const Duration(milliseconds: 500), vsync: this);
-    // The animation determines what path the animation will take. You can try different Curves values, although I found
+    // The animation determines what path the animation will take. You can try different Curves values
     Animation<double> animation =
         CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
 
@@ -69,10 +66,12 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
   onWillPop() {
     LoginState loginState = context.read<LoginBloc>().state;
     if (loginState is LoginUserState) {
-      FirebaseDatabase.instance.goOffline();
-      FirebaseAuth.instance.signOut();
+      FirebaseDatabase.instance.goOffline(); //firebase database offline mode
+      FirebaseAuth.instance.signOut(); //firebase signOut
     }
-    context.read<LoginBloc>().add(LoginNullEvent());
+    context
+        .read<LoginBloc>()
+        .add(LoginNullEvent()); //login event is the return login screen active
     return false;
   }
 
@@ -94,7 +93,7 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
               location: locationState.locationData,
               data: loginState.marker!,
               zoom: map.zoom));
-        });
+        }); //mapController listener and
     }
   }
 
@@ -139,87 +138,28 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
                       ),
                     ),
                     if (loginState is LoginCenterState)
-                      BlocBuilder<CalculatorMeterBloc, CalculatorMeterState>(
-                        builder: (context, calculatorMeterState) {
-                          if (calculatorMeterState is SetMeter) {
-                            return BlocProvider(
-                              create: (context) => CalculatorMeterNetworkBloc()
-                                ..add(InitialEvent()),
-                              child: BlocBuilder<CalculatorMeterNetworkBloc,
-                                  CalculatorMeterNetworkState>(
-                                builder: (context, state) {
-                                  if (state is CalculatorMeterNetworkListen)
-                                    return Stack(
-                                      children: [
-                                        Builder(builder: (context) {
-                                          List<DataModel> data = [];
-                                          for (var model in state.data) {
-                                            if (model.lat != null &&
-                                                model.lng != null) {
-                                              LatLng user = LatLng(
-                                                  model.lat!, model.lng!);
-                                              Distance distance = Distance();
-                                              double userMeter = distance.as(
-                                                  LengthUnit.Meter,
-                                                  user,
-                                                  locationState
-                                                      .locationData); //latlng 1 and latlng2 calculate meters between
-                                              if (userMeter <=
-                                                  calculatorMeterState.meter) {
-                                                data.add(model);
-                                              }
-                                            }
-                                          }
-                                          return MarkerLayerWidget(
-                                            options: MarkerLayerOptions(
-                                              markers: data.map((e) {
-                                                return Marker(
-                                                  width: 80,
-                                                  height: 80,
-                                                  point: LatLng(e.lat!, e.lng!),
-                                                  builder: (ctx) =>
-                                                      DataMarker(),
-                                                );
-                                              }).toList(),
-                                            ),
-                                          );
-                                        }),
-                                        CircleLayerWidget(
-                                          options: CircleLayerOptions(
-                                            circles: [
-                                              CircleMarker(
-                                                  point: locationState
-                                                      .locationData,
-                                                  color: Colors.blue.shade50
-                                                      .withOpacity(0.7),
-                                                  useRadiusInMeter: true,
-                                                  radius: calculatorMeterState
-                                                      .meter),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  else
-                                    return Container();
-                                },
-                              ),
-                            );
-                          } else
-                            return Container();
-                        },
-                      ),
+                      CircleCalculatorMeterWidget(
+                          locationData: locationState.locationData),
+                    if (online)
+                      if (locationState.isMock == false)
+                        CircleLayerWidget(
+                          options: CircleLayerOptions(
+                            circles: [
+                              CircleMarker(
+                                  color: Colors.blue[200]!.withOpacity(0.5),
+                                  point: locationState.locationData,
+                                  radius: locationState.accuracy,
+                                  useRadiusInMeter: true)
+                            ],
+                          ),
+                        ),
                     if (online)
                       MarkerLayerWidget(
                         options: MarkerLayerOptions(
                           markers: [
                             Marker(
-                              width: locationState.accuracy <= 60
-                                  ? locationState.accuracy
-                                  : 20,
-                              height: locationState.accuracy <= 60
-                                  ? locationState.accuracy
-                                  : 20,
+                              width: 20,
+                              height: 20,
                               point: locationState.locationData,
                               builder: (ctx) => UserMarker(
                                 isMock: locationState.isMock,
@@ -230,58 +170,8 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
                         ),
                       ),
                     if (online)
-                      MarkerLayerWidget(
-                          options: MarkerLayerOptions(markers: [
-                        Marker(
-                            width: 80,
-                            height: 80,
-                            point: locationState.locationData,
-                            builder: (BuildContext context) {
-                              return StreamBuilder<CompassEvent>(
-                                stream: FlutterCompass.events,
-                                builder: (context, snapshot) {
-                                  if (snapshot.hasError) {
-                                    return Text(
-                                        'Error reading heading: ${snapshot.error}');
-                                  }
-
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return Center(
-                                      child: CircularProgressIndicator(),
-                                    );
-                                  }
-
-                                  double? direction = snapshot.data!.heading;
-
-                                  // if direction is null, then device does not support this sensor
-                                  // show error message
-                                  if (direction == null)
-                                    return Center(
-                                      child: Text(
-                                          "Device does not have sensors !"),
-                                    );
-
-                                  return Transform.rotate(
-                                    angle: (direction * (math.pi / 180)),
-                                    child: Column(
-                                      children: [
-                                        Container(
-                                          color: Colors.transparent,
-                                          width: 30,
-                                          height: 30,
-                                          child: CustomPaint(
-                                            painter: PaintTriangle(),
-                                            child: Container(),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              );
-                            })
-                      ]))
+                      UserGyroscopeMarkerLayerWidget(
+                          locationData: locationState.locationData),
                   ],
                 ),
                 if (loginState is LoginUserState)
@@ -299,7 +189,6 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
                           });
                         } else {
                           context.read<LoginBloc>().add(LoginOnlineEvent());
-
                           setState(() {
                             online = true;
                           });
@@ -323,11 +212,7 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
         ),
       );
     } else {
-      return Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      ); //loading event
+      return LoadingScreen(); //loading event
     }
   }
 }

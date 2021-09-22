@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_compass/flutter_compass.dart';
-import 'package:map/compenent/paintTriangle.dart';
-import 'dart:math' as math;
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 class UserMarker extends StatelessWidget {
   final double accuracy;
@@ -16,11 +12,8 @@ class UserMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-        width: isMock == false ? 20 : accuracy,
-        height: isMock == false ? 20 : accuracy,
-        decoration: BoxDecoration(
-            color: Colors.blue.shade100,
-            borderRadius: BorderRadius.circular(100)),
+        width: 20,
+        height: 20,
         child: Icon(
           Icons.circle,
           color: isMock == true ? Colors.grey : Colors.blue,
@@ -28,16 +21,3 @@ class UserMarker extends StatelessWidget {
         ));
   }
 }
-/*
-Container(
-                width: isMock == false ? 20 : accuracy,
-                height: isMock == false ? 20 : accuracy,
-                decoration: BoxDecoration(
-                    color: Colors.blue.shade100,
-                    borderRadius: BorderRadius.circular(100)),
-                child: Icon(
-                  Icons.circle,
-                  color: isMock == true ? Colors.grey : Colors.blue,
-                  size: 20,
-                )),
- */
