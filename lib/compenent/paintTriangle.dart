@@ -17,6 +17,7 @@ class PaintTriangle extends CustomPainter {
 
     path.moveTo((size.width / 2), 20);
     path.lineTo(0, size.height);
+    path.lineTo(size.width/2, 0);
     path.lineTo(size.height, size.width);
 
     path.close();

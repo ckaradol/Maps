@@ -51,9 +51,7 @@ class BuildDataMarkers extends StatelessWidget {
                       double userMeter = distance.as(
                           LengthUnit.Meter,
                           user, locationData);
-                      showDialog(context: context, builder: (context)=>ShowDialogInfo(title: "User Info",content: Column(children: [
-                        Text("$userMeter meters away")
-                      ],),));
+                      showDialog(context: context, builder: (context)=>ShowDialogInfo(title: "User Info",content: Text("$userMeter meters away"),));
                     },
                     child: DataMarker()),
               ),
