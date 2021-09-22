@@ -12,6 +12,9 @@ class LoginCenterState extends LoginState {
 
   LoginCenterState(this.marker);
 }
+class LoginLoadingState extends LoginState{
+
+}
 
 class LoginErrorState extends LoginState {
   final String error;
