@@ -23,6 +23,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       add(LoginSetStateEvent(center: true, marker: dataModel));
     }
     if (event is LoginUserEvent) {
+      yield LoginLoadingState();
       try {
         await FirebaseAuth.instance.signInAnonymously();
         var db = FirebaseDatabase.instance.reference().child("userLocation");
@@ -54,8 +55,10 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
                   return;
                 }
               }
+              await location.enableBackgroundMode();
               location.onLocationChanged
                   .listen((LocationData currentLocation) async {
+
                 if (currentLocation.isMock == false) {
                   db.child(userId).get().then((doc) {
                     if (doc.exists) {
