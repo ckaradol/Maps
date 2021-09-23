@@ -8,9 +8,13 @@ import 'package:flutter_map/plugin_api.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:map/bacground/Login/login_bloc.dart';
 import 'package:map/bacground/calculatorMeter/calculator_meter_bloc.dart';
+import 'package:map/bacground/calculatorMeterNetwork/calculator_meter_network_bloc.dart';
 import 'package:map/bacground/location/location_bloc.dart';
+import 'package:map/bacground/model/dataModel.dart';
+import 'package:map/compenent/buildDataMarkers.dart';
 import 'package:map/compenent/circleCalculatorMeterWidget.dart';
 import 'package:map/compenent/loadingScreen.dart';
+import 'package:map/compenent/showDialogInfo.dart';
 import 'package:map/compenent/userMarker.dart';
 import 'package:map/compenent/userGyroscopeMarkerLayerWidget.dart';
 import 'package:map/compenent/zoombuttons_plugin_option.dart';
@@ -66,7 +70,7 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
   onWillPop() {
     LoginState loginState = context.read<LoginBloc>().state;
     if (loginState is LoginUserState) {
-      FirebaseDatabase.instance.goOffline(); //firebase database offline mode
+      context.read<LoginBloc>().add(LoginOfflineEvent());
       FirebaseAuth.instance.signOut(); //firebase signOut
     }
     context
@@ -75,7 +79,7 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
     return false;
   }
 
-  bool online = true;
+   bool online=true;
 
   double km = 300;
 
@@ -86,21 +90,23 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
     super.initState();
     LoginState loginState = context.read<LoginBloc>().state;
     LocationState locationState = context.read<LocationBloc>().state;
-    if (loginState is LoginCenterState) {
+
       if (locationState is LocationSetState)
         mapController.mapEventStream.forEach((map) {
           context.read<CalculatorMeterBloc>().add(SetMeterEvent(
               location: locationState.locationData,
-              data: loginState.marker!,
+              data: [],
               zoom: map.zoom));
         }); //mapController listener and
-    }
+
   }
 
   @override
   Widget build(BuildContext context) {
     LoginState loginState = context.read<LoginBloc>().state;
     LocationState locationState = context.read<LocationBloc>().state;
+    CalculatorMeterNetworkState calculatorMeterNetworkState =
+        context.read<CalculatorMeterNetworkBloc>().state;
     if (locationState is LocationSetState) {
       return WillPopScope(
         onWillPop: () {
@@ -108,71 +114,152 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
         },
         child: SafeArea(
           child: Scaffold(
-            body: Stack(
-              children: [
-                FlutterMap(
-                  mapController: mapController,
-                  options: MapOptions(
-                    minZoom: 1,
-                    maxZoom: 18,
-                    center: locationState.locationData,
-                    zoom: 17,
-                    plugins: [
-                      ZoomButtonsPlugin(),
-                    ],
-                  ),
-                  nonRotatedLayers: [
-                    ZoomButtonsPluginOption(
-                      mini: true,
-                      padding: 10,
-                      alignment: Alignment.bottomLeft,
-                    ),
-                  ],
-                  children: [
-                    TileLayerWidget(
-                      options: TileLayerOptions(
-                        zoomReverse: false,
-                        urlTemplate:
-                            "https://www.google.com/maps/vt/pb=!1m4!1m3!1i{z}!2i{x}!3i{y}!2m3!1e0!2sm!3i420120488!3m7!2sen!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m1!1e0!23i4111425",
-                        subdomains: ['a', 'b', 'c'],
-                      ),
-                    ),
-                    if (loginState is LoginCenterState)
-                      CircleCalculatorMeterWidget(
-                          locationData: locationState.locationData),
-                    if (online)
-                      if (locationState.isMock == false)
-                        CircleLayerWidget(
-                          options: CircleLayerOptions(
-                            circles: [
-                              CircleMarker(
-                                  color: Colors.blue[200]!.withOpacity(0.5),
-                                  point: locationState.locationData,
-                                  radius: locationState.accuracy,
-                                  useRadiusInMeter: true)
-                            ],
+            bottomNavigationBar: loginState is LoginCenterState
+                ? calculatorMeterNetworkState is CalculatorMeterNetworkListen
+                    ? SizedBox.fromSize(
+                        size: Size.fromHeight(50),
+                        child: Container(
+                          color: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 20),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    "Aktif Kullanıcı Sayısı: ${calculatorMeterNetworkState.data.length}",
+                                    style: TextStyle(fontSize: 17),
+                                  ),
+                                ),
+                                Builder(builder: (context) {
+                                  List<DataModel> data = [];
+                                  for (var model
+                                      in calculatorMeterNetworkState.data) {
+                                    if (model.lat != null &&
+                                        model.lng != null) {
+                                      LatLng user =
+                                          LatLng(model.lat!, model.lng!);
+                                      Distance distance = Distance();
+                                      double userMeter = distance.as(
+                                          LengthUnit.Meter,
+                                          user,
+                                          locationState
+                                              .locationData); //latlng 1 and latlng2 calculate meters between
+                                      CalculatorMeterState state = context
+                                          .read<CalculatorMeterBloc>()
+                                          .state;
+                                      if (state is SetMeter) if (userMeter <=
+                                          state.meter) {
+                                        data.add(model);
+                                      }
+                                    }
+                                  }
+                                  return Expanded(
+                                    child: Text(
+                                      "Alan Aktif Kullanıcı Sayısı: ${data.length}",
+                                      style: TextStyle(fontSize: 17),
+                                    ),
+                                  );
+                                })
+                              ],
+                            ),
                           ),
                         ),
-                    if (online)
-                      MarkerLayerWidget(
-                        options: MarkerLayerOptions(
-                          markers: [
-                            Marker(
-                              width: 20,
-                              height: 20,
-                              point: locationState.locationData,
-                              builder: (ctx) => UserMarker(
-                                isMock: locationState.isMock,
-                                accuracy: locationState.accuracy,
-                              ),
-                            ),
+                      )
+                    : null
+                : null,
+            body: Stack(
+              children: [
+                BlocBuilder<CalculatorMeterBloc, CalculatorMeterState>(
+                  builder: (context, calculatorMeterState) {
+                    if (calculatorMeterState is SetMeter)
+                      return FlutterMap(
+                        mapController: mapController,
+                        options: MapOptions(
+                          minZoom: 1,
+                          maxZoom: 18,
+                          center: locationState.locationData,
+                          zoom: 17,
+                          plugins: [
+                            ZoomButtonsPlugin(),
                           ],
                         ),
-                      ),
-                    if (online)
-                      UserGyroscopeMarkerLayerWidget(
-                          locationData: locationState.locationData),
-                  ],
+                        nonRotatedLayers: [
+                          ZoomButtonsPluginOption(
+                            mini: true,
+                            padding: 10,
+                            alignment: Alignment.bottomLeft,
+                          ),
+                        ],
+                        children: [
+                          TileLayerWidget(
+                            options: TileLayerOptions(
+                              zoomReverse: false,
+                              urlTemplate:
+                                  "https://www.google.com/maps/vt/pb=!1m4!1m3!1i{z}!2i{x}!3i{y}!2m3!1e0!2sm!3i420120488!3m7!2sen!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m1!1e0!23i4111425",
+                              subdomains: ['a', 'b', 'c'],
+                            ),
+                          ),
+
+                            CircleCalculatorMeterWidget(
+                                locationData: locationState.locationData),
+                          if (online)
+                            if (locationState.isMock == false)
+                              CircleLayerWidget(
+                                options: CircleLayerOptions(
+                                  circles: [
+                                    CircleMarker(
+                                        color:
+                                            Colors.blue[200]!.withOpacity(0.5),
+                                        point: locationState.locationData,
+                                        radius: locationState.accuracy,
+                                        useRadiusInMeter: true)
+                                  ],
+                                ),
+                              ),
+                          if (online)
+                            MarkerLayerWidget(
+                              options: MarkerLayerOptions(
+                                markers: [
+                                  Marker(
+                                    width: 20,
+                                    height: 20,
+                                    point: locationState.locationData,
+                                    builder: (ctx) => UserMarker(
+                                      isMock: locationState.isMock,
+                                      accuracy: locationState.accuracy,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (online)
+                            UserGyroscopeMarkerLayerWidget(
+                                locationData: locationState.locationData),
+                          if (loginState is LoginCenterState)
+                            BlocBuilder<CalculatorMeterNetworkBloc,
+                                CalculatorMeterNetworkState>(
+                              builder: (context, calculatorMeterNetworkState) {
+                                if (calculatorMeterNetworkState
+                                    is CalculatorMeterNetworkListen) {
+                                  return BuildDataMarkers(
+                                      locationData: locationState.locationData,
+                                      calculatorMeter:
+                                          calculatorMeterState.meter,
+                                      stateData:
+                                          calculatorMeterNetworkState.data);
+                                } else {
+                                  return Container();
+                                }
+                              },
+                            )
+
+                        ],
+                      );
+                    else
+                      return Center(
+                        child: CircularProgressIndicator(),
+                      );
+                  },
                 ),
                 if (loginState is LoginUserState)
                   Container(
@@ -194,7 +281,7 @@ class _MapsState extends State<Maps> with TickerProviderStateMixin {
                           });
                         }
                       },
-                      child: Text(online ? "Not Login" : "Login"),
+                      child: Text(online ? "Aktif Değil" : "Aktif"),
                     ),
                   )
               ],

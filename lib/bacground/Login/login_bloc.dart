@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/animation.dart';
 import 'package:location/location.dart';
 import 'package:map/bacground/model/dataModel.dart';
 import 'package:meta/meta.dart';
@@ -25,14 +26,27 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     if (event is LoginUserEvent) {
       yield LoginLoadingState();
       try {
-        await FirebaseAuth.instance.signInAnonymously();
+        FirebaseDatabase.instance.goOnline(); //connect database
+       UserCredential userCredential= await FirebaseAuth.instance.signInAnonymously();
         var db = FirebaseDatabase.instance.reference().child("userLocation");
+        if(userCredential.user!=null){
+          db.child(userCredential.user!.uid).get().then((doc) {
+            if(doc.exists){
+              if(doc.value["connect"]==false){
+                db.child(userCredential.user!.uid).set({
+                  "connect":true
+                });
+              }
+            }
+          });
+        }
+
         FirebaseAuth.instance.authStateChanges().listen((user) async {
           if (user == null) {
             add(LoginNullEvent());
           } else {
             try {
-              FirebaseDatabase.instance.goOnline(); //connect database
+
               String userId = user.uid;
               db.child(user.uid).onDisconnect().update({"connect": false});
               Location location = Location();
@@ -99,8 +113,6 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
               .reference()
               .child("userLocation")
               .child(user.uid);
-          FirebaseDatabase.instance.goOnline();
-          db.onDisconnect().set({"connect": false});
 
           db.update({
             "connect": true,
@@ -113,7 +125,17 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       }
     }
     if (event is LoginOfflineEvent) {
-      FirebaseDatabase.instance.goOffline();
+      var user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        var db = FirebaseDatabase.instance
+            .reference()
+            .child("userLocation")
+            .child(user.uid);
+
+        db.update({
+          "connect": false,
+        });
+      }
     }
     if (event is LoginSetStateEvent) {
       if (event.center) {

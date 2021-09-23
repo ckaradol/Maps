@@ -16,7 +16,7 @@ class ShowDialogInfo extends StatelessWidget {
           onPressed: () {
             Navigator.pop(context);
           },
-          child: Text("OK"),
+          child: Text("Tamam"),
         ),
       ],
     );
