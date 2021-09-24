@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:map/bacground/Login/login_bloc.dart';
 import 'package:map/bacground/model/dataModel.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:map/compenent/showDialogInfo.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'dataMarker.dart';
 
@@ -20,12 +22,21 @@ class BuildDataMarkers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    LoginState loginState = context.read<LoginBloc>().state;
     return MarkerLayerWidget(
       options: MarkerLayerOptions(
         markers: stateData.map((e) {
           return Marker(
-            width: 80,
-            height: 80,
+            width: loginState is LoginCenterState
+                ? 80
+                : loginState is LoginUserState
+                    ? 40
+                    : 0,
+            height: loginState is LoginCenterState
+                ? 80
+                : loginState is LoginUserState
+                    ? 40
+                    : 0,
             point: LatLng(e.lat!, e.lng!),
             builder: (ctx) => Container(
               child: GestureDetector(

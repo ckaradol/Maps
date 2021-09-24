@@ -18,14 +18,14 @@ class LoginScreen extends StatelessWidget {
               onPressed: () {
                 context.read<LoginBloc>().add(LoginCenterEvent());
               },
-              child: Text("Center"),
+              child: Text("Merkez"),
             ),
             Expanded(child: SizedBox()),
             ElevatedButton(
               onPressed: () {
                 context.read<LoginBloc>().add(LoginUserEvent());
               },
-              child: Text("User"),
+              child: Text("Kullanıcı"),
             ),
             Expanded(child: SizedBox()),
           ],

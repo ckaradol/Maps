@@ -20,13 +20,85 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     LoginEvent event,
   ) async* {
     if (event is LoginCenterEvent) {
-      List<DataModel> dataModel = [];
-      add(LoginSetStateEvent(center: true, marker: dataModel));
+      try {
+     await   FirebaseDatabase.instance.goOnline(); //connect database
+        UserCredential userCredential= await FirebaseAuth.instance.signInAnonymously();
+        var db = FirebaseDatabase.instance.reference().child("markLocation");
+        if(userCredential.user!=null){
+          db.child(userCredential.user!.uid).get().then((doc) {
+            if(doc.exists){
+              if(doc.value["connect"]==false){
+                db.child(userCredential.user!.uid).set({
+                  "connect":true
+                });
+              }
+            }
+          });
+        }
+        if (userCredential.user == null) {
+          add(LoginNullEvent());
+        } else {
+          try {
+            String userId = userCredential.user!.uid;
+            db.child(userCredential.user!.uid).onDisconnect().update({"connect": false});
+            Location location = Location();
+
+            bool _serviceEnabled;
+            PermissionStatus _permissionGranted;
+
+            _serviceEnabled = await location.serviceEnabled();
+            if (!_serviceEnabled) {
+              _serviceEnabled = await location.requestService();
+              if (!_serviceEnabled) {
+                return;
+              }
+            }
+
+            _permissionGranted = await location.hasPermission();
+            if (_permissionGranted == PermissionStatus.denied) {
+              _permissionGranted = await location.requestPermission();
+              if (_permissionGranted != PermissionStatus.granted) {
+                return;
+              }
+            }
+            await location.enableBackgroundMode();
+            location.onLocationChanged
+                .listen((LocationData currentLocation) async {
+              if (currentLocation.isMock == false) {
+                db.child(userId).get().then((doc) {
+                  if (doc.exists) {
+                    if (doc.value["connect"] == false) {
+                      return false;
+                    }
+                    db.child(userId).set({
+                      "connect": true,
+                      "lat": currentLocation.latitude,
+                      "lng": currentLocation.longitude
+                    });
+                  } else {
+                    db.child(userId).set({
+                      "connect": true,
+                      "lat": currentLocation.latitude,
+                      "lng": currentLocation.longitude
+                    });
+                  }
+                });
+              }
+            });
+            add(LoginSetStateEvent(center: true, marker: []));
+          } on FirebaseException catch (e) {
+            add(LoginErrorEvent(e.message!));
+          }
+        }
+      } on FirebaseAuthException catch (e) {
+        add(LoginErrorEvent(e.message!));
+      }
+
     }
     if (event is LoginUserEvent) {
       yield LoginLoadingState();
       try {
-        FirebaseDatabase.instance.goOnline(); //connect database
+        await  FirebaseDatabase.instance.goOnline(); //connect database
        UserCredential userCredential= await FirebaseAuth.instance.signInAnonymously();
         var db = FirebaseDatabase.instance.reference().child("userLocation");
         if(userCredential.user!=null){
@@ -40,15 +112,12 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
             }
           });
         }
-
-        FirebaseAuth.instance.authStateChanges().listen((user) async {
-          if (user == null) {
+          if (userCredential.user == null) {
             add(LoginNullEvent());
           } else {
             try {
-
-              String userId = user.uid;
-              db.child(user.uid).onDisconnect().update({"connect": false});
+              String userId = userCredential.user!.uid;
+              db.child(userCredential.user!.uid).onDisconnect().update({"connect": false});
               Location location = Location();
 
               bool _serviceEnabled;
@@ -72,7 +141,6 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
               await location.enableBackgroundMode();
               location.onLocationChanged
                   .listen((LocationData currentLocation) async {
-
                 if (currentLocation.isMock == false) {
                   db.child(userId).get().then((doc) {
                     if (doc.exists) {
@@ -99,7 +167,6 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
               add(LoginErrorEvent(e.message!));
             }
           }
-        });
       } on FirebaseAuthException catch (e) {
         add(LoginErrorEvent(e.message!));
       }
